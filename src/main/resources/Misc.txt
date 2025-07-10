@@ -1,0 +1,23 @@
+// String prompt = "You are a resume analyzer. Extract skills, years of experience, and highest education from the resume text. " +
+        //     "Respond in JSON format with fields: skills (array), yearsOfExperience (string), highestEducation (string)";
+
+        // JSONObject requestBody = new JSONObject();
+        // requestBody.put("model", "text-davinci-003"); 
+        // requestBody.put("prompt", prompt);
+        // requestBody.put("max_tokens", 200);
+        // requestBody.put("temperature", 0.7);
+
+        // HttpClient client = HttpClient.newHttpClient();
+        // HttpRequest request = HttpRequest.newBuilder()
+        //         .uri(URI.create(url))
+        //         .header("Content-Type", "application/json")
+        //         .header("Authorization", "Bearer " + openaiApiKey)
+        //         .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
+        //         .build();
+
+        // HttpResponse<String> httpResponse;
+        // try {
+        //     httpResponse = client.send(request, HttpResponse.BodyHandlers.ofString());
+        // } catch(IOException | InterruptedException e) {
+        //     throw new RuntimeException("Failed to analyze resume: " + e.getMessage());
+        // }

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Post Job - ATS System</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Post New Job</h2>
+            <button onclick="logout()" class="btn">Logout</button>
+        </div>
+        <form id="jobForm">
+            <div class="form-group">
+                <label>Upload Job Description Document:</label>
+                <input type="file" id="jobDescriptionFile" accept=".pdf,.docx,.doc">
+                <button type="button" onclick="uploadJobDescription()" class="btn btn-secondary">Upload & Parse</button>
+            </div>
+            <div class="form-group">
+                <label>Job Title:</label>
+                <input type="text" id="title" required>
+            </div>
+            <div class="form-group">
+                <label>Description:</label>
+                <textarea id="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Requirements:</label>
+                <textarea id="requirements" required></textarea>
+            </div>
+
+           
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary">Post Job</button>
+                <button type="button" class="btn" onclick="location.href='/employer/dashboard.html'">Cancel</button>
+            </div>
+        </form>
+    </div>
+    <script src="/js/auth.js"></script>
+    <script src="/js/employer/post-job.js"></script>
+</body>
+</html> 

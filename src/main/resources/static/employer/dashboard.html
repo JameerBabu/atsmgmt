@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employer Dashboard - ATS System</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        /* Basic styling for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Employer Dashboard</h2>
+            <button onclick="logout()" class="btn">Logout</button>
+        </div>
+        <div class="actions">
+            <button onclick="location.href='/employer/post-job.html'" class="btn btn-primary">Post New Job</button>
+        </div>
+        <h3>Your Posted Jobs</h3>
+        <div id="jobsList"></div>
+
+        <!-- Resume Upload Section -->
+        <h3>Upload Resume for Job</h3>
+        <div class="resume-upload-section">
+            <select id="jobSelect" class="form-control">
+                <option value="">Select a job...</option>
+            </select>
+            <input type="file" id="resumeFile" accept=".pdf,.docx,.doc" style="margin: 10px 0;">
+            <button onclick="uploadResumeForJob()" class="btn btn-primary">Upload Resume</button>
+        </div>
+
+        <!-- Application Status Summary Section -->
+        <h3>Application Status Summary</h3>
+        <div>
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate">
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate">
+            <button onclick="loadApplicationSummary()" class="btn btn-primary">Load Summary</button>
+            <button onclick="downloadCSV()" class="btn btn-secondary" id="downloadBtn" style="display: none;">Download CSV</button>
+        </div>
+
+        <table id="summaryTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Total Applications</th>
+                    <th>Percentage (%)</th>
+                </tr>
+            </thead>
+            <tbody id="summaryTableBody">
+                <!-- Data will be populated here dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/employer/dashboard.js?v=1"></script>
+
+    <script>
+        let currentSummaryData = []; // Store the current summary data
+
+        // Function to map numeric status to display text
+        function getStatusDisplay(status) {
+            switch(parseInt(status)) {
+                case 1: return 'Submitted';
+                case 2: return 'Reviewing';
+                case 3: return 'Accepted';
+                case -1: return 'Rejected';
+                default: return status; // Return original value if no match
+            }
+        }
+
+        function loadApplicationSummary() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates.');
+                return;
+            }
+
+            // Make actual API call to your backend
+            fetch(`/api/jobs/loadSummary?startDate=${startDate}&endDate=${endDate}`, {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                currentSummaryData = data; // Store the data for CSV download
+                renderSummaryTable(data);
+                document.getElementById('downloadBtn').style.display = 'inline-block';
+            })
+            .catch(error => {
+                console.error('Error loading summary:', error);
+                alert('Failed to load summary data.');
+            });
+        }
+
+        function renderSummaryTable(data) {
+            const tableBody = document.getElementById('summaryTableBody');
+            tableBody.innerHTML = ''; // Clear previous rows
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${getStatusDisplay(row.status)}</td>
+                    <td>${row.totalApplications}</td>
+                    <td>${row.percentage}%</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            document.getElementById('summaryTable').style.display = 'table';
+        }
+
+        function downloadCSV() {
+            if (currentSummaryData.length === 0) {
+                alert('No data to download. Please load summary first.');
+                return;
+            }
+
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Create CSV content
+            const csvContent = [
+                ['Application Status Summary Report'],
+                [`Period: ${startDate} to ${endDate}`],
+                [], // Empty row
+                ['Status', 'Total Applications', 'Percentage (%)'],
+                ...currentSummaryData.map(row => [
+                    getStatusDisplay(row.status),
+                    row.totalApplications,
+                    row.percentage + '%'
+                ])
+            ].map(row => row.join(',')).join('\n');
+
+            // Create and download the file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `application-summary-${startDate}-to-${endDate}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

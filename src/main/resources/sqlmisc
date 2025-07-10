@@ -1,0 +1,294 @@
+-- =====================================================
+-- Job Application Analytics - MySQL Stored Procedures
+-- =====================================================
+
+DELIMITER $$
+
+-- 1. Application Status Summary Report
+DROP PROCEDURE IF EXISTS GetApplicationStatusSummary$$
+CREATE PROCEDURE GetApplicationStatusSummary(
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    SELECT 
+        status,
+        COUNT(*) as total_applications,
+        ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM job_applications 
+                                   WHERE application_date BETWEEN p_start_date AND p_end_date)), 2) as percentage
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date
+    GROUP BY status
+    ORDER BY total_applications DESC;
+END$$
+
+-- 2. Daily Application Trends
+DROP PROCEDURE IF EXISTS GetDailyApplicationTrends$$
+CREATE PROCEDURE GetDailyApplicationTrends(
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    SELECT 
+        DATE(application_date) as application_day,
+        COUNT(*) as applications_count,
+        COUNT(DISTINCT applicant_id) as unique_applicants,
+        COUNT(DISTINCT job_id) as jobs_applied_for
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date
+    GROUP BY DATE(application_date)
+    ORDER BY application_day;
+END$$
+
+-- 3. Top Jobs by Application Volume
+DROP PROCEDURE IF EXISTS GetTopJobsByApplications$$
+CREATE PROCEDURE GetTopJobsByApplications(
+    IN p_limit INT,
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    SELECT 
+        job_id,
+        COUNT(*) as total_applications,
+        COUNT(DISTINCT applicant_id) as unique_applicants,
+        AVG(CASE 
+            WHEN status = 1 THEN 1 
+            WHEN status = 0 THEN 0 
+            ELSE NULL 
+        END) * 100 as success_rate_percentage
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date
+    GROUP BY job_id
+    ORDER BY total_applications DESC
+    LIMIT p_limit;
+END$$
+
+-- 4. Applicant Activity Report
+DROP PROCEDURE IF EXISTS GetApplicantActivityReport$$
+CREATE PROCEDURE GetApplicantActivityReport(
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    SELECT 
+        applicant_id,
+        COUNT(*) as total_applications,
+        COUNT(DISTINCT job_id) as unique_jobs_applied,
+        MIN(application_date) as first_application,
+        MAX(application_date) as last_application,
+        DATEDIFF(MAX(application_date), MIN(application_date)) as days_active,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as successful_applications,
+        ROUND(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as success_rate
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date
+    GROUP BY applicant_id
+    HAVING total_applications > 1
+    ORDER BY total_applications DESC;
+END$$
+
+-- 5. Resume Type Analysis
+DROP PROCEDURE IF EXISTS GetResumeTypeAnalysis$$
+CREATE PROCEDURE GetResumeTypeAnalysis()
+BEGIN
+    SELECT 
+        COALESCE(resume_type, 'Unknown') as resume_type,
+        COUNT(*) as applications_count,
+        COUNT(DISTINCT applicant_id) as unique_applicants,
+        ROUND(AVG(CASE WHEN status = 1 THEN 1 ELSE 0 END) * 100, 2) as success_rate_percentage,
+        ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM job_applications)), 2) as market_share_percentage
+    FROM job_applications 
+    WHERE resume_data IS NOT NULL
+    GROUP BY resume_type
+    ORDER BY applications_count DESC;
+END$$
+
+-- 6. Monthly Application Metrics
+DROP PROCEDURE IF EXISTS GetMonthlyApplicationMetrics$$
+CREATE PROCEDURE GetMonthlyApplicationMetrics(
+    IN p_year INT
+)
+BEGIN
+    SELECT 
+        YEAR(application_date) as year,
+        MONTH(application_date) as month,
+        MONTHNAME(application_date) as month_name,
+        COUNT(*) as total_applications,
+        COUNT(DISTINCT applicant_id) as unique_applicants,
+        COUNT(DISTINCT job_id) as unique_jobs,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as successful_applications,
+        ROUND(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as success_rate,
+        ROUND(COUNT(*) / DAY(LAST_DAY(application_date)), 2) as avg_applications_per_day
+    FROM job_applications 
+    WHERE YEAR(application_date) = p_year
+    GROUP BY YEAR(application_date), MONTH(application_date)
+    ORDER BY year, month;
+END$$
+
+-- 7. Application Conversion Funnel
+DROP PROCEDURE IF EXISTS GetApplicationConversionFunnel$$
+CREATE PROCEDURE GetApplicationConversionFunnel(
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    SELECT 
+        'Total Applications' as stage,
+        COUNT(*) as count,
+        100.0 as percentage
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date
+    
+    UNION ALL
+    
+    SELECT 
+        'With Resume' as stage,
+        COUNT(*) as count,
+        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM job_applications 
+                                 WHERE application_date BETWEEN p_start_date AND p_end_date), 2) as percentage
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date 
+    AND resume_data IS NOT NULL
+    
+    UNION ALL
+    
+    SELECT 
+        'Successful Applications' as stage,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as count,
+        ROUND(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) * 100.0 / 
+              (SELECT COUNT(*) FROM job_applications 
+               WHERE application_date BETWEEN p_start_date AND p_end_date), 2) as percentage
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date;
+END$$
+
+-- 8. Peak Application Hours Analysis
+DROP PROCEDURE IF EXISTS GetPeakApplicationHours$$
+CREATE PROCEDURE GetPeakApplicationHours(
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    SELECT 
+        HOUR(application_date) as hour_of_day,
+        COUNT(*) as applications_count,
+        ROUND((COUNT(*) * 100.0 / (SELECT COUNT(*) FROM job_applications 
+                                   WHERE application_date BETWEEN p_start_date AND p_end_date)), 2) as percentage,
+        AVG(CASE WHEN status = 1 THEN 1 ELSE 0 END) * 100 as success_rate
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date
+    GROUP BY HOUR(application_date)
+    ORDER BY applications_count DESC;
+END$$
+
+-- 9. Applicant Retention Analysis
+DROP PROCEDURE IF EXISTS GetApplicantRetentionAnalysis$$
+CREATE PROCEDURE GetApplicantRetentionAnalysis()
+BEGIN
+    WITH applicant_months AS (
+        SELECT 
+            applicant_id,
+            DATE_FORMAT(application_date, '%Y-%m') as application_month,
+            COUNT(*) as monthly_applications
+        FROM job_applications 
+        GROUP BY applicant_id, DATE_FORMAT(application_date, '%Y-%m')
+    ),
+    retention_data AS (
+        SELECT 
+            applicant_id,
+            COUNT(DISTINCT application_month) as active_months,
+            MIN(application_month) as first_month,
+            MAX(application_month) as last_month,
+            SUM(monthly_applications) as total_applications
+        FROM applicant_months
+        GROUP BY applicant_id
+    )
+    SELECT 
+        active_months as months_active,
+        COUNT(*) as applicant_count,
+        ROUND(AVG(total_applications), 2) as avg_applications_per_applicant,
+        ROUND((COUNT(*) * 100.0 / (SELECT COUNT(DISTINCT applicant_id) FROM job_applications)), 2) as percentage_of_applicants
+    FROM retention_data
+    GROUP BY active_months
+    ORDER BY active_months;
+END$$
+
+-- 10. Comprehensive Dashboard Summary
+DROP PROCEDURE IF EXISTS GetDashboardSummary$$
+CREATE PROCEDURE GetDashboardSummary(
+    IN p_start_date DATE,
+    IN p_end_date DATE
+)
+BEGIN
+    -- Summary metrics
+    SELECT 
+        COUNT(*) as total_applications,
+        COUNT(DISTINCT applicant_id) as unique_applicants,
+        COUNT(DISTINCT job_id) as unique_jobs,
+        SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as successful_applications,
+        ROUND(SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as overall_success_rate,
+        COUNT(CASE WHEN resume_data IS NOT NULL THEN 1 END) as applications_with_resume,
+        ROUND(COUNT(CASE WHEN resume_data IS NOT NULL THEN 1 END) * 100.0 / COUNT(*), 2) as resume_upload_rate,
+        ROUND(COUNT(*) / DATEDIFF(p_end_date, p_start_date), 2) as avg_applications_per_day
+    FROM job_applications 
+    WHERE application_date BETWEEN p_start_date AND p_end_date;
+END$$
+
+DELIMITER ;
+
+-- =====================================================
+-- Usage Examples and Documentation
+-- =====================================================
+
+/*
+USAGE EXAMPLES:
+
+1. Get application status summary for last 30 days:
+CALL GetApplicationStatusSummary(DATE_SUB(CURDATE(), INTERVAL 30 DAY), CURDATE());
+
+2. Get daily application trends for current month:
+CALL GetDailyApplicationTrends(DATE_FORMAT(CURDATE(), '%Y-%m-01'), LAST_DAY(CURDATE()));
+
+3. Get top 10 jobs by applications in last quarter:
+CALL GetTopJobsByApplications(10, DATE_SUB(CURDATE(), INTERVAL 3 MONTH), CURDATE());
+
+4. Get applicant activity report:
+CALL GetApplicantActivityReport(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), CURDATE());
+
+5. Analyze resume types:
+CALL GetResumeTypeAnalysis();
+
+6. Get monthly metrics for current year:
+CALL GetMonthlyApplicationMetrics(YEAR(CURDATE()));
+
+7. Application conversion funnel:
+CALL GetApplicationConversionFunnel(DATE_SUB(CURDATE(), INTERVAL 1 MONTH), CURDATE());
+
+8. Peak application hours:
+CALL GetPeakApplicationHours(DATE_SUB(CURDATE(), INTERVAL 7 DAY), CURDATE());
+
+9. Applicant retention analysis:
+CALL GetApplicantRetentionAnalysis();
+
+10. Dashboard summary:
+CALL GetDashboardSummary(DATE_SUB(CURDATE(), INTERVAL 30 DAY), CURDATE());
+
+SPRING BOOT INTEGRATION:
+Use @Repository with JdbcTemplate to call these procedures:
+
+@Repository
+public class JobAnalyticsRepository {
+    
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    
+    public List<Map<String, Object>> getApplicationStatusSummary(LocalDate startDate, LocalDate endDate) {
+        return jdbcTemplate.queryForList(
+            "CALL GetApplicationStatusSummary(?, ?)", 
+            startDate, endDate
+        );
+    }
+    
+    // Add similar methods for other procedures...
+}
+*/
