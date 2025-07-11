@@ -15,7 +15,8 @@ public class Job {
     private String title;
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-    @Lob
+    
+    @Column(name = "requirements", columnDefinition = "TEXT")
     private String requirements;
     private LocalDateTime postedDate;
     
