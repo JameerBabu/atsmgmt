@@ -38,7 +38,7 @@ public class JobService {
         job.setPostedDate(LocalDateTime.now());
         Job savedJob = jobRepository.save(job);
         // Generate shareable link after job has an ID
-        String shareableLink = "https://yourdomain.com/jobs/" + savedJob.getId();
+        String shareableLink = "https://atsmgmt.onrender.com/jobs/" + savedJob.getId();
         savedJob.setShareableLink(shareableLink);
         return jobRepository.save(savedJob);
     }
