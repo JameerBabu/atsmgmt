@@ -193,7 +193,8 @@ public ResponseEntity<?> uploadResumeForJob(
         Application application = new Application();
         application.setJob(job);
         application.setApplicant(employer); // or a special user/flag if needed
-        application.setResumeFile(file);
+        // application.setResumeFile(file); -- mysql
+        application.setResumeData(file.getBytes());
 
         applicationService.submitApplication(application);
 
