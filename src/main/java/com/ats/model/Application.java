@@ -32,7 +32,7 @@ public class Application {
     // private byte[] resumeData;
     // postgresql
     @Lob
-    @Type(type = "org.hibernate.type.TextType")
+    @Column(name = "resume_data", columnDefinition = "BYTEA")
     private byte[] resumeData;
 
 
