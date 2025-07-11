@@ -147,10 +147,18 @@ public class JobController {
     }
 
     @PostMapping("/analyzedescription")
-    public ResponseEntity<Void> analyzeJobDescription(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Void> analyzeJobDescription(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String token) {
         try {
             System.out.println("Analyzing job description");
+            String bearerToken = token.replace("Bearer ", "");
+            String userId = bearerToken.replace("dummy-token-", "").split("-")[0];
+            User employer = userService.getUserById(Long.parseLong(userId));
+
+            if (employer == null) {
+                return ResponseEntity.badRequest().build();
+            }
             Job extractedJob = jobService.extractTextFromJobDescription(file);
+            extractedJob.setEmployer(employer);
             // Save the extracted job to database
             jobService.createJob(extractedJob);
             return ResponseEntity.noContent().build();
