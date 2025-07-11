@@ -28,12 +28,12 @@ public class Application {
     private String resumeType;
     
     // MySQL
-    @Column(name = "resume_data", columnDefinition = "LONGBLOB")
-    private byte[] resumeData;
-    // postgresql
-    // @Lob
-    // @Column(name = "resume_data")
+    // @Column(name = "resume_data", columnDefinition = "LONGBLOB")
     // private byte[] resumeData;
+    // postgresql
+    @Lob
+    @Column(name = "resume_data", columnDefinition = "BYTEA")
+    private byte[] resumeData;
 
 
     private LocalDateTime applicationDate;
