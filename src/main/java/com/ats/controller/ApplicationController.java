@@ -1,6 +1,7 @@
 package com.ats.controller;
 
 import com.ats.model.Application;
+import com.ats.model.ApplicationStatus;
 import com.ats.model.Job;
 import com.ats.model.User;
 import com.ats.service.ApplicationService;
