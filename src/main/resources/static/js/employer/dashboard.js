@@ -193,6 +193,15 @@ function renderApplications(applications) {
                 <button onclick="toggleDetails(${app.id})" class="btn btn-secondary">
                     View Details
                 </button>
+                <button onclick="rejectApplication(${app.id})" class="btn btn-danger" style="margin-left: 8px;">
+                    Reject
+                </button>
+                <button onclick="approveApplication(${app.id})" class="btn btn-success" style="margin-left: 8px;">
+                    Approve
+                </button>
+                <button onclick="reviewApplication(${app.id})" class="btn btn-warning" style="margin-left: 8px;">
+                    Review
+                </button>
             </div>
             <div id="details-${app.id}" class="application-details" style="display: none;">
                 <div class="skills-section">
@@ -372,3 +381,47 @@ document.addEventListener('DOMContentLoaded', () => {
     loadJobs();
     populateJobSelect();
 }); 
+
+
+// Common function to update application status
+async function updateApplicationStatus(applicationId, status, actionName) {
+    try {
+        const response = await fetch(`/api/applications/${applicationId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            body: JSON.stringify(status)
+        });
+        
+        if (response.ok) {
+            alert(`Application ${actionName} successfully`);
+            // Refresh the applications view
+            if (currentJob) {
+                viewApplications(currentJob.id);
+            }
+        } else {
+            const error = await response.text();
+            throw new Error(error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert(`Failed to ${actionName} application: ` + error.message);
+    }
+}
+
+// Function to reject an application (status: 4)
+function rejectApplication(applicationId) {
+    updateApplicationStatus(applicationId, 4, 'rejected');
+}
+
+// Function to approve an application (status: 3)
+function approveApplication(applicationId) {
+    updateApplicationStatus(applicationId, 3, 'approved');
+}
+
+// Function to review an application (status: 2)
+function reviewApplication(applicationId) {
+    updateApplicationStatus(applicationId, 2, 'marked for review');
+} 
