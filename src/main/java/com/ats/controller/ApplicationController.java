@@ -24,6 +24,8 @@ public class ApplicationController {
     @Autowired
     private JobService jobService;
 
+    private ApplicationStatus applicationStatus;
+
     @PostMapping("/submit")
     public ResponseEntity<?> submitApplication(
             @RequestParam("resumeFile") MultipartFile resumeFile,
@@ -63,6 +65,46 @@ public class ApplicationController {
             return ResponseEntity.ok(applicationService.getApplicationsByApplicant(applicant));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Failed to fetch applications: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateApplicationStatus(
+            @PathVariable Long id,
+            @RequestBody int status,
+            @RequestHeader("Authorization") String token) {
+        try {
+            
+            if (Integer.valueOf(status) == null) {
+                return ResponseEntity.badRequest().body("Invalid status value. Must be 2, 3, or 4.");
+            }
+            
+            // Update application status
+            
+
+            switch(status){
+                case 1:
+                applicationStatus = ApplicationStatus.PENDING;
+                break;
+                case 2:
+                applicationStatus = ApplicationStatus.REVIEWING;
+                break;
+                case 3:
+                applicationStatus = ApplicationStatus.ACCEPTED;
+                break;
+                case 4:
+                applicationStatus = ApplicationStatus.REJECTED;
+                break;
+                default:
+            }
+            Application updatedApplication = applicationService.updateApplicationStatus(id, applicationStatus);
+            if (updatedApplication == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            return ResponseEntity.ok(updatedApplication);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to update application status: " + e.getMessage());
         }
     }
 } 
